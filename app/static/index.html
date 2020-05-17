@@ -1,0 +1,498 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html style="overflow-y: scroll;">
+
+<head>
+
+  <meta content="text/html; charset=utf-8" http-equiv="content-type">
+  <title>Web dApp Sample - Login</title>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+  <script src="https://www.jsviews.com/download/jsrender.min.js"></script>
+  <!--<link rel="stylesheet" type="text/css" href="./styles.css">-->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="bundle.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link id="favicon" rel="icon"
+    href="https://www.dash.org/wp-content/themes/dash-theme/img/icons/favicon/favicon-32x32.png" type="image/x-icon">
+  <!-- Change theme-color to your primary theme color -->
+  <!--<meta name="theme-color" content="#008de4">-->
+  <script src="bundle.js" async></script>
+  <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+  <script type="module">
+    /*
+    //Top bar
+    import { MDCTopAppBar } from '@material/top-app-bar';
+    //const topAppBarElement = document.querySelector('.mdc-top-app-bar');
+    //const topAppBar = new MDCTopAppBar(topAppBarElement);
+    //tabs
+    import { MDCTabBar } from '@material/tab-bar';
+    //progress bar
+    import { MDCLinearProgress } from '@material/linear-progress';
+    //const linearProgress = new MDCLinearProgress(document.querySelector('.mdc-linear-progress'));
+    //textfield
+    import { MDCTextField } from '@material/textfield';
+    //ripple
+    //const ripple = new MDCRipple(document.querySelector('.foo-button'));
+    //import {MDCRipple} from '@material/ripple/index';
+    */
+  </script>
+
+
+  <script id="tweetcardTemplate" type="text/x-jsrender">
+  <div> 
+    {{for}}
+      <div class="mdc-card mdc-card--outlined tweet-card">
+          <div class="mdc-card__media">
+              <div class="mdc-card__media-content-square tweet-card-content">
+                  <div><b>{{:_data.username}}</b></div>
+                  <div><small>{{:_data.temp_timestamp}}</small></div>
+                  <div><small><a href="#?docid={{:_data.authref}}">auth</a></small></div>
+                  <div>{{:_data.message}}</div>
+              </div>
+          </div>
+      </div>
+    {{/for}}
+  </div>
+  
+  
+  </script>
+  <script id="usercardTemplate" type="text/x-jsrender">
+    <div> 
+      {{for}}
+        <div class="mdc-card mdc-card--outlined tweet-card">
+            <div class="mdc-card__media">
+                <div class="mdc-card__media-content-square tweet-card-content">
+                    <div>{{:_data.username}}</div>
+                    <div><small>{{:_data.temp_timestamp}}</small></div>
+                    <div><small><a href="#?docid={{:_data.authref}}">auth</a></small></div>
+                </div>
+            </div>
+        </div>
+      {{/for}}
+    </div>
+    
+    </script>
+
+  <script>
+
+    async function doAuth(URL, pin, message) {
+      let result;
+
+      try {
+        result = await $.ajax({
+          url: URL,
+          type: 'POST',
+          data: { pin: pin, tweet: message },
+          timeout: 50000
+        });
+        $('#progress').hide()
+        return result;
+      } catch (error) {
+        console.error(error);
+        $('#progress').hide()
+        throw error;
+      }
+    }
+
+
+    async function fetchTweets() {
+      console.log('fetch tweets');
+      fetch("./api/v1/tweets")
+        .then(response => {
+          return response.text()
+        })
+        .then(data => {
+          console.log('got results');
+          console.dir(JSON.parse(data).success.data);
+          var template = $.templates("#tweetcardTemplate");
+          var htmlOutput = template.render(JSON.parse(data).success.data);
+          $("#tweets").html(htmlOutput);
+
+        })
+        .catch(error => {
+          console.log('error fetching tweets');
+          createSnackbar('error fetching signups', 'Retry?', function () { fetchTweets() });
+
+        });
+    }
+
+
+    async function fetchSignups() {
+      console.log('fetch signups');
+      fetch("./api/v1/signups")
+        .then(response => {
+          return response.text()
+        })
+        .then(data => {
+          console.log('got results');
+          console.dir(JSON.parse(data).success.data);
+          var template = $.templates("#usercardTemplate");
+          var htmlOutput = template.render(JSON.parse(data).success.data);
+          $("#signups").html(htmlOutput);
+
+        })
+        .catch(error => {
+          console.log('error fetching signups');
+          createSnackbar('error fetching signups', 'Retry?', function () { fetchSignups() });
+
+        });
+
+    }
+
+    $(document).ready(function () {
+
+      //hide progress bar
+      $('#progress').hide()
+
+      //load tabbar content
+      const tabBar = new mdc.tabBar.MDCTabBar(document.querySelector('.mdc-tab-bar'));
+      const contentEls = document.querySelectorAll('.content');
+
+      tabBar.listen('MDCTabBar:activated', function (event) {
+        // Hide currently-active content
+        document
+          .querySelector('.content--active')
+          .classList.remove('content--active');
+        // Show content for newly-activated tab
+        contentEls[event.detail.index].classList.add('content--active');
+      });
+
+
+      //set tectfield query selector
+      const textFields = document.querySelectorAll('.mdc-text-field');
+      for (const textField of textFields) {
+        mdc.textField.MDCTextField.attachTo(textField);
+      }
+      /*
+            const textField = new mdc.textField.MDCTextField(
+              document.querySelector('.mdc-text-field'),
+            );
+      */
+      //fetch tweets
+      fetchTweets();
+
+      //fetch signups
+      fetchSignups();
+
+      var user, pin, tweet
+
+      var baseURL = "api/v1/user/";
+      var pageSignup = "/signup-request";
+      var pageLogin = "/login-request";
+      var pageTweet = "/tweet-request";
+
+
+      $("#signup").click(async function () {
+        $('#progress').show()
+        user = $("#user").val();
+        pin = $("#pin").val();
+        tweet = $("#message").val();
+
+        URL = baseURL.concat(user, pageSignup);
+       // $('pre').html(`Attempting signup for user: ${user}...`);
+
+        try {
+          const resultSignup = await doAuth(URL, pin);
+          console.log(resultSignup);
+          //$('pre').html(JSON.stringify(resultSignup));
+          fetchTweets();
+          createSnackbar('Successfully signed up!', 'Dismiss');
+        }
+        catch (e) {
+          //$('pre').html('Error: ' + JSON.stringify(e));
+          console.log('Error signing up:' + JSON.stringify(e));
+          createSnackbar('Error signing up:' + e.responseText, 'Dismiss');
+        }
+
+      });
+      $("#login").click(async function () {
+        $('#progress').show()
+        user = $("#user").val();
+        pin = $("#pin").val();
+        tweet = $("#message").val();
+
+        URL = baseURL.concat(user, pageLogin);
+        //$('pre').html(`Attempting login for user: ${user}...`);
+
+        try {
+          const resultLogin = await doAuth(URL, pin);
+          console.log(resultLogin);
+          createSnackbar('Sucessfully logged in!', 'Dismiss');
+          $('pre').html(JSON.stringify(resultLogin));
+        }
+        catch (e) {
+          //$('pre').html('Error: ' + JSON.stringify(e));
+          createSnackbar('Error submitting logging in :' + e.responseText, 'Dismiss');
+        }
+
+      });
+      $("#tweet").click(async function () {
+        $('#progress').show()
+        user = $("#user").val();
+        pin = $("#pin").val();
+        tweet = $("#message").val();
+
+        URL = baseURL.concat(user, pageTweet);
+        //$('pre').html(`Attempting send tweet for user: ${user}...`);
+
+        try {
+          const resultTweet = await doAuth(URL, pin, tweet);
+          console.log(resultTweet);
+          fetchTweets();
+          createSnackbar('Sucessfully tweeted!', 'Dismiss');
+          //$('pre').html(JSON.stringify(resultTweet));
+        }
+        catch (e) {
+          //$('pre').html('Error: ' + JSON.stringify(e));
+          console.log('tweet error', JSON.stringify(e))
+          createSnackbar('Error submitting tweet:' + e.responseText, 'Retry?', function () { $("#tweet").click() });
+        }
+
+      });
+
+
+      // SNACKBAR STUFF
+
+      //e.g. with an action...
+      // createSnackbar(longMessage, 'Wot?', function() { alert('Moo!');
+
+      var createSnackbar = (function () {
+        // Any snackbar that is already shown
+        var previous = null;
+
+
+        return function (message, actionText, action) {
+          if (previous) {
+            previous.dismiss();
+          }
+          var snackbar = document.createElement('div');
+          snackbar.className = 'paper-snackbar';
+          snackbar.dismiss = function () {
+            this.style.opacity = 0;
+          };
+          var text = document.createTextNode(message);
+          snackbar.appendChild(text);
+          if (actionText) {
+            if (!action) {
+              action = snackbar.dismiss.bind(snackbar);
+            }
+            var actionButton = document.createElement('button');
+            actionButton.className = 'action';
+            actionButton.innerHTML = actionText;
+            actionButton.addEventListener('click', action);
+            snackbar.appendChild(actionButton);
+          }
+          setTimeout(function () {
+            if (previous === this) {
+              previous.dismiss();
+            }
+          }.bind(snackbar), 5000);
+
+          snackbar.addEventListener('transitionend', function (event, elapsed) {
+            if (event.propertyName === 'opacity' && this.style.opacity == 0) {
+              this.parentElement.removeChild(this);
+              if (previous === this) {
+                previous = null;
+              }
+            }
+          }.bind(snackbar));
+
+
+
+          previous = snackbar;
+          document.body.appendChild(snackbar);
+          // In order for the animations to trigger, I have to force the original style to be computed, and then change it.
+          getComputedStyle(snackbar).bottom;
+          snackbar.style.bottom = '0px';
+          snackbar.style.opacity = 1;
+        };
+      })();
+
+    });
+// END DOCUMENT READY
+
+  </script>
+
+
+</head>
+
+<body class="mdc-typography">
+
+  <div class="page" style="text-align: center;">
+    <div class="mdc-layout-grid">
+      <div class="mdc-layout-grid__inner">
+        <!-- spacer div -->
+        <div
+          class="mdc-layout-grid__cell mdc-layout-grid__cell--span-3 mdc-layout-grid__cell--span-2-tablet mdc-layout-grid__cell--span-1-phone">
+        </div>
+        <!-- content div -->
+        <div
+          class="mdc-layout-grid__cell mdc-layout-grid__cell--span-6 mdc-layout-grid__cell--span-4-tablet mdc-layout-grid__cell--span-2-phone">
+          <!-- tabs---->
+          <div class="mdc-tab-bar" role="tablist">
+            <div class="mdc-tab-scroller">
+              <div class="mdc-tab-scroller__scroll-area">
+                <div class="mdc-tab-scroller__scroll-content">
+                  <button class="mdc-tab mdc-tab--active" role="tab" aria-selected="true" tabindex="0">
+                    <span class="mdc-tab__content">
+                      <span class="mdc-tab__text-label">Signup</span>
+                    </span>
+                    <span class="mdc-tab-indicator mdc-tab-indicator--active">
+                      <span class="mdc-tab-indicator__content mdc-tab-indicator__content--underline"></span>
+                    </span>
+                    <span class="mdc-tab__ripple"></span>
+                  </button>
+                  <button class="mdc-tab mdc-tab" role="tab" aria-selected="true" tabindex="0">
+                    <span class="mdc-tab__content">
+                      <span class="mdc-tab__text-label">Login</span>
+                    </span>
+                    <span class="mdc-tab-indicator mdc-tab-indicator">
+                      <span class="mdc-tab-indicator__content mdc-tab-indicator__content--underline"></span>
+                    </span>
+                    <span class="mdc-tab__ripple"></span>
+                  </button>
+                  <button class="mdc-tab mdc-tab" role="tab" aria-selected="true" tabindex="0">
+                    <span class="mdc-tab__content">
+                      <span class="mdc-tab__text-label">Tweet</span>
+                    </span>
+                    <span class="mdc-tab-indicator mdc-tab-indicator">
+                      <span class="mdc-tab-indicator__content mdc-tab-indicator__content--underline"></span>
+                    </span>
+                    <span class="mdc-tab__ripple"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!--progress-->
+          <div id="progress" role="progressbar" class="mdc-linear-progress--indeterminate" aria-label="Progress Bar"
+            aria-valuemin="0" aria-valuemax="1" aria-valuenow="0">
+            <div style="display:inline-block" class="mdc-linear-progress__bar mdc-linear-progress__primary-bar">
+              <span class="mdc-linear-progress__bar-inner"></span>
+            </div>
+          </div>
+          <!--main container-->
+          <div style="display:inline-block; text-align: left;">
+            <!--intro-->
+            <div>
+              <h1>Welcome to the Web dApp Sample</h1>
+
+              <p>Enter your Dash username and the PIN from your <a href="#">Secure Home.</a></p>
+            </div>
+            <!--main form username & pin-->
+            <div>
+              <div>
+                <label class="mdc-text-field mdc-text-field--filled">
+                  <span class="mdc-text-field__ripple"></span>
+                  <input id="user" cols="15" maxlength="128" class="mdc-text-field__input" type="text" aria-labelledby="username-label">
+                  <span class="mdc-floating-label" id="username-label">Username</span>
+                  <span class="mdc-line-ripple"></span>
+                </label>
+              </div>
+              <br />
+              <div>
+                <label class="mdc-text-field mdc-text-field--filled">
+                  <span class="mdc-text-field__ripple"></span>
+                  <input id="pin" cols="6" maxlength="6" class="mdc-text-field__input" type="text" aria-labelledby="pin-label" aria-controls="my-helper-id"
+                  aria-describedby="my-helper-id">
+                  <span class="mdc-floating-label" id="pin-label">PIN</span>
+                  <span class="mdc-line-ripple"></span>
+                </label>
+                <div class="mdc-text-field-helper-line">
+                  <div class="mdc-text-field-character-counter">0 / 6</div>
+                </div>
+              </div>
+              <br />
+
+              <!--end main form-->
+              <!--tabbed content-->
+              <!--SIGNUP-->
+              <div class="content content--active">
+                <div>
+                  <button id="signup" class="mdc-theme-primary mdc-button">
+                    <div class="mdc-button__ripple"></div>
+                    <span class="mdc-button__label">Sign Up</span>
+                  </button>
+                </div>
+
+                <br /><br />
+                <h2>Signed up users</h2>
+                <p>A list of signed up users</p>
+
+                <div id="signups" style="display: inline-block;text-align: left;">
+
+                </div>
+              </div>
+              <div class="content">
+                <!--LOGIN-->
+                <div>
+                  <button id="login" class="mdc-theme-primary mdc-button">
+                    <div class="mdc-button__ripple"></div>
+                    <span class="mdc-button__label">Login</span>
+                  </button>
+                </div>
+                <br /><br />
+
+              </div>
+              <div class="content">
+                <!--TWEET-->
+                <div>
+                  <!--
+                  <label class="mdc-text-field mdc-text-field--filled">
+                    <span class="mdc-text-field__ripple"></span>
+                    <input id="message" class="mdc-text-field__input" type="text" aria-labelledby="message-label">
+                    <span class="mdc-floating-label" id="message-label">Tweet</span>
+                    <span class="mdc-line-ripple"></span>
+                  </label>
+                -->
+                <label class="mdc-text-field mdc-text-field--textarea">
+                  <textarea id="message" class="mdc-text-field__input" aria-labelledby="my-label-id" rows="8"
+                    cols="40" maxlength="140"></textarea>
+                  <span class="mdc-notched-outline">
+                    <span class="mdc-notched-outline__leading"></span>
+                    <span class="mdc-notched-outline__notch">
+                      <span class="mdc-floating-label" id="my-label-id">Tweet</span>
+                    </span>
+                    <span class="mdc-notched-outline__trailing"></span>
+                  </span>
+                </label>
+                <div class="mdc-text-field-helper-line">
+                  <div class="mdc-text-field-character-counter">0 / 140</div>
+                </div>
+                </div>
+                <br />
+                <div>
+                  <button id="tweet" class="mdc-theme-primary mdc-button">
+                    <div class="mdc-button__ripple"></div>
+                    <span class="mdc-button__label">Tweet</span>
+                  </button>
+                </div>
+                <h2>Tweets</h2>
+                <p>A list of tweets</p>
+                <div id="tweets" style="display: inline-block;text-align: left;"></div>
+              </div>
+              <!--output-->
+              <div>
+                <pre></pre>
+              </div>
+              <!--end main container-->
+            </div>
+
+          </div>
+
+          <!-- end content cell-->
+        </div>
+        <!-- spacer div -->
+        <div
+          class="mdc-layout-grid__cell mdc-layout-grid__cell--span-3 mdc-layout-grid__cell--span-2-tablet mdc-layout-grid__cell--span-1-phone">
+        </div>
+      </div>
+      <!--grid inner-->
+    </div>
+    <!--grid-->
+  </div>
+  <!--page-->
+
+</body>
+
+</html>

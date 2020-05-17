@@ -1,0 +1,82 @@
+{
+  "user": {
+    "indices": [
+      {
+        "unique": true,
+        "properties": [
+          {
+            "userName": "asc"
+          }
+        ]
+      }
+    ],
+    "required": ["userName"],
+    "properties": {
+      "userName": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false
+  },
+  "profile": {
+    "indices": [
+      {
+        "unique": true,
+        "properties": [
+          {
+            "userName": "asc"
+          }
+        ]
+      }
+    ],
+    "required": ["userName", "displayName"],
+    "properties": {
+      "userName": {
+        "type": "string"
+      },
+      "displayName": {
+        "type": "string"
+      },
+      "about": {
+        "type": "string"
+      },
+      "avatarUrl": {
+        "type": "string",
+        "format": "url"
+      }
+    },
+    "additionalProperties": false
+  },
+  "message": {
+    "indices": [
+      {
+        "unique": true,
+        "properties": [
+          {
+            "userName": "asc"
+          },
+          {
+            "userName": "asc"
+          }
+        ]
+      }
+    ],
+    "required": ["userName", "displayName"],
+    "properties": {
+      "userName": {
+        "type": "string"
+      },
+      "displayName": {
+        "type": "string"
+      },
+      "about": {
+        "type": "string"
+      },
+      "avatarUrl": {
+        "type": "string",
+        "format": "url"
+      }
+    },
+    "additionalProperties": false
+  }
+}
