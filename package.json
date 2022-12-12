@@ -44,7 +44,7 @@
     "dashmachine-crypto": "^0.4.0",
     "dotenv": "^8.2.0",
     "esm": "^3.2.25",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "express-session": "^1.17.1",
     "memorystore": "^1.6.2",
     "redis": "^3.0.2",
